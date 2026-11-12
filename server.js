@@ -15,7 +15,7 @@ function active(s,id,n){if(s.screen!=='*'&&s.screen!==id)return false;if(s.days&
   if(s.from&&n.d<s.from)return false;if(s.to&&n.d>s.to)return false;const a=s.start||'00:00',b=s.end||'24:00';return a<=b?(n.t>=a&&n.t<b):(n.t>=a||n.t<b)}
 function resolve(id){const sc=data.screens.find(x=>x.id===id);if(!sc)return null;const n=nowParts();let pid=sc.playlist;
   data.schedules.forEach(s=>{if(active(s,id,n))pid=s.playlist});const pl=data.playlists.find(p=>p.id===pid);
-  return{name:sc.name,playlist:pl?pl.name:'',items:pl?pl.items.map(i=>{const m=data.media.find(x=>x.id===i.media);return m&&Object.assign({},m,{duration:i.duration||10})}).filter(Boolean):[]}}
+  return{name:sc.name,orientation:sc.orientation==='vertical'?'vertical':'horizontal',playlist:pl?pl.name:'',items:pl?pl.items.map(i=>{const m=data.media.find(x=>x.id===i.media);return m&&Object.assign({},m,{duration:i.duration||10})}).filter(Boolean):[]}}
 function serve(req,res,fp,ct){fs.stat(fp,(e,st)=>{if(e){res.writeHead(404);return res.end('Not found')}
   let s=0,t=st.size-1,code=200;const hd={'Content-Type':ct,'Accept-Ranges':'bytes'};const m=/bytes=(\d*)-(\d*)/.exec(req.headers.range||'');
   if(m){s=m[1]?+m[1]:0;t=m[2]?+m[2]:t;code=206;hd['Content-Range']='bytes '+s+'-'+t+'/'+st.size}
