@@ -19,8 +19,9 @@ const nm=(a,id)=>esc((a.find(x=>x.id===id)||{}).name||'—');
 function vScreens(){return `<div class=card><h3>Add screen</h3><input id=ns placeholder="e.g. Entrance, Counter"> <button onclick="addScreen()">Add</button></div>`+D.screens.map((s,i)=>{const on=seen[s.id]&&Date.now()-seen[s.id]<45000;
  return `<div class=card><b>${esc(s.name)}</b> <span class="dot ${on?'on':''}"></span><small>${on?'online':'offline'}</small><br><small>Player URL:</small> <code>${location.origin}/player?s=${s.id}</code>
  <div class=row>Default playlist <select onchange="mut(()=>D.screens[${i}].playlist=this.value)">${opts(D.playlists,s.playlist,'— none —')}</select>
+ <label>Screen alignment <select aria-label="Screen alignment" onchange="mut(()=>D.screens[${i}].orientation=this.value)"><option value="horizontal"${s.orientation!=='vertical'?' selected':''}>Horizontal (landscape)</option><option value="vertical"${s.orientation==='vertical'?' selected':''}>Vertical (portrait)</option></select></label>
  <button class=g onclick="ren(${i})">Rename</button><button class=r onclick="if(confirm('Delete screen?'))mut(()=>D.screens.splice(${i},1))">Delete</button></div></div>`}).join('')}
-function addScreen(){const n=$('#ns').value.trim();if(n)mut(()=>D.screens.push({id:'s'+uid(),name:n,playlist:''}))}
+function addScreen(){const n=$('#ns').value.trim();if(n)mut(()=>D.screens.push({id:'s'+uid(),name:n,playlist:'',orientation:'horizontal'}))}
 function ren(i){const n=prompt('Screen name',D.screens[i].name);if(n)mut(()=>D.screens[i].name=n)}
 function vMedia(){return `<div class=card><h3>Upload images / videos</h3><input type=file id=fi multiple accept="image/*,video/*"> <button onclick="upl()">Upload</button> <small id=up></small></div>
 <div class=card><h3>Text slide</h3><div class=row><input id=tt placeholder="Headline / message" style="flex:1"> bg <input type=color id=tb value="#0b3d91"> text <input type=color id=tc value="#ffffff"><button onclick="addText()">Add</button></div></div>
