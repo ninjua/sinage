@@ -4,9 +4,21 @@
 .it{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;animation:f .8s}
 @keyframes f{from{opacity:0}to{opacity:1}}
 .it img,.it video,.it iframe{width:100%;height:100%;object-fit:contain;border:0;background:#000}
-.tx{font-size:7vw;font-weight:700;text-align:center;padding:6vw;line-height:1.15;box-sizing:border-box}</style></head>
+.tx{font-size:var(--text-size,7vw);font-weight:700;text-align:center;padding:var(--text-padding,6vw);line-height:1.15;box-sizing:border-box}</style></head>
 <body><div id="s"></div><script>
 var id=(location.search.match(/[?&]s=([^&]+)/)||[])[1]||'screen1',cur='',items=[],idx=0,tm=null,S=document.getElementById('s');
+var orientation='horizontal';
+function layout(){
+ var w=window.innerWidth,h=window.innerHeight,vertical=orientation==='vertical';
+ var rotate=vertical?w>h:h>w;
+ var cw=rotate?h:w,ch=rotate?w:h;
+ S.style.width=cw+'px';S.style.height=ch+'px';
+ S.style.left='50%';S.style.top='50%';
+ S.style.transform='translate(-50%,-50%)'+(rotate?' rotate(90deg)':'');
+ S.style.setProperty('--text-size',cw*.07+'px');
+ S.style.setProperty('--text-padding',cw*.06+'px');
+}
+window.addEventListener('resize',layout);layout();
 function show(el){el.className+=' it';S.appendChild(el);setTimeout(function(){while(S.children.length>1)S.removeChild(S.firstChild)},900)}
 function idle(){var d=document.createElement('div');d.className='tx';d.style.color='#777';d.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' \u2014 no content scheduled';show(d)}
 function next(){clearTimeout(tm);if(!items.length){idle();tm=setTimeout(next,15000);return}
@@ -17,6 +29,6 @@ function next(){clearTimeout(tm);if(!items.length){idle();tm=setTimeout(next,150
  else{el.className='tx';el.style.background=m.bg||'#0b3d91';el.style.color=m.fg||'#fff';el.textContent=m.text;tm=setTimeout(next,dur)}
  show(el)}
 function poll(){var x=new XMLHttpRequest();x.open('GET','/api/screen/'+id+'?_='+Date.now());
- x.onload=function(){try{var d=JSON.parse(x.responseText),sig=JSON.stringify(d.items);if(sig!==cur){cur=sig;items=d.items||[];idx=0;next()}}catch(e){}};x.send()}
+ x.onload=function(){try{var d=JSON.parse(x.responseText),sig=JSON.stringify(d.items);orientation=d.orientation==='vertical'?'vertical':'horizontal';layout();if(sig!==cur){cur=sig;items=d.items||[];idx=0;next()}}catch(e){}};x.send()}
 poll();setInterval(poll,15000);
 </script></body></html>
