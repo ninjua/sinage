@@ -23,12 +23,21 @@ function vScreens(){return `<div class=card><h3>Add screen</h3><input id=ns plac
  <button class=g onclick="ren(${i})">Rename</button><button class=r onclick="if(confirm('Delete screen?'))mut(()=>D.screens.splice(${i},1))">Delete</button></div></div>`}).join('')}
 function addScreen(){const n=$('#ns').value.trim();if(n)mut(()=>D.screens.push({id:'s'+uid(),name:n,playlist:'',orientation:'horizontal'}))}
 function ren(i){const n=prompt('Screen name',D.screens[i].name);if(n)mut(()=>D.screens[i].name=n)}
+const mediaSrc=m=>m.url||'/media/'+m.file;
 function vMedia(){return `<div class=card><h3>Upload images / videos</h3><input type=file id=fi multiple accept="image/*,video/*"> <button onclick="upl()">Upload</button> <small id=up></small></div>
 <div class=card><h3>Text slide</h3><div class=row><input id=tt placeholder="Headline / message" style="flex:1"> bg <input type=color id=tb value="#0b3d91"> text <input type=color id=tc value="#ffffff"><button onclick="addText()">Add</button></div></div>
+<div class=card><h3>Add media from a link</h3><div class=row><input type=url id=eu placeholder="https://your-server.com/video.mp4" style="flex:1" aria-label="Media URL"><select id=et aria-label="Media type"><option value="video">Video</option><option value="image">Image</option></select><input id=en placeholder="Name (optional)" aria-label="Media name"><button onclick="addExternal()">Add link</button></div><small>Use a direct HTTPS image or video URL accessible without signing in. The player loads it directly from that server.</small></div>
 <div class=card><h3>Web page</h3><div class=row><input id=wu placeholder="https://…" style="flex:1"><button onclick="addWeb()">Add</button></div><small>Some sites refuse to be shown inside another page.</small></div>
-<div class=card><h3>Library</h3>${D.media.map((m,i)=>`<div class=row>${m.type==='image'?`<img src="/media/${m.file}" class=th>`:m.type==='video'?`<video src="/media/${m.file}#t=0.5" class=th muted></video>`:`<span class=th>${m.type}</span>`}<span style="flex:1">${esc(m.name)}</span><button class=r onclick="delM(${i})">Delete</button></div>`).join('')||'<small>Nothing yet</small>'}</div>`}
+<div class=card><h3>Library</h3>${D.media.map((m,i)=>`<div class=row>${m.type==='image'?`<img src="${esc(mediaSrc(m))}" class=th>`:m.type==='video'?`<video src="${esc(mediaSrc(m))}" class=th muted></video>`:`<span class=th>${m.type}</span>`}<span style="flex:1">${esc(m.name)}${m.url&&m.type!=='web'?'<br><small>External link</small>':''}</span><button class=r onclick="delM(${i})">Delete</button></div>`).join('')||'<small>Nothing yet</small>'}</div>`}
 async function upl(){for(const f of $('#fi').files){$('#up').textContent='Uploading '+f.name+'…';await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',headers:{'Content-Type':f.type||'application/octet-stream'},body:f})}await load()}
 const addText=()=>{const v=$('#tt').value.trim();if(v)mut(()=>D.media.push({id:uid(),type:'text',name:v,text:v,bg:$('#tb').value,fg:$('#tc').value}))};
+function addExternal(){
+ const raw=$('#eu').value.trim();let url;
+ try{url=new URL(raw);if(url.protocol!=='https:'||url.username||url.password)throw 0}catch(e){return alert('Enter a direct HTTPS media URL without a username or password.')}
+ const type=$('#et').value;if(type!=='image'&&type!=='video')return;
+ const name=$('#en').value.trim()||url.pathname.split('/').pop()||'External '+type;
+ mut(()=>D.media.push({id:uid(),type,name,url:url.href}));
+}
 const addWeb=()=>{const v=$('#wu').value.trim();if(v)mut(()=>D.media.push({id:uid(),type:'web',name:v,url:v}))};
 function delM(i){const id=D.media[i].id;mut(()=>{D.playlists.forEach(p=>p.items=p.items.filter(x=>x.media!==id));D.media.splice(i,1)})}
 function vPl(){const p=D.playlists.find(x=>x.id===selPl)||D.playlists[0];selPl=p?p.id:'';const pi=D.playlists.indexOf(p);
