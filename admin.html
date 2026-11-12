@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signage Admin</title>
+<style>:root{color-scheme:light dark;--bg:#f4f6fa;--c:#fff;--tx:#111827;--mu:#6b7280;--ac:#2563eb;--bd:#d9dee7}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1420;--c:#182033;--tx:#e8edf7;--mu:#98a3b8;--ac:#6ea0ff;--bd:#2b3650}}
+body{margin:0;font:15px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+nav{display:flex;gap:6px;padding:12px 20px;background:var(--c);border-bottom:1px solid var(--bd)}nav b{margin-right:16px}
+main{max-width:980px;margin:20px auto;padding:0 16px}.card{background:var(--c);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+h3{margin:0 0 8px}button,input,select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+button{background:var(--ac);color:#fff;border:0;cursor:pointer}button.g{background:var(--bd);color:var(--tx)}button.r{background:#dc2626}button.t{background:none;color:var(--tx)}button.on{background:var(--ac);color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}.th{width:64px;height:40px;object-fit:cover;border-radius:6px;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:#9ca3af;margin:0 4px}.dot.on{background:#16a34a}small{color:var(--mu)}code{word-break:break-all}</style></head>
+<body><nav><b>Signage</b><span id="nv"></span></nav><main id="v">Loading…</main><script>
+let D,seen={},TZ='',tab='screens',selPl='';
+const $=s=>document.querySelector(s),esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),uid=()=>Math.random().toString(36).slice(2,9);
+async function load(){const j=await(await fetch('/api/data')).json();D=j.data;seen=j.seen;TZ=j.tz;render()}
+async function save(){await fetch('/api/data',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(D)})}
+function mut(f){f();save();render()}
+const opts=(a,sel,blank)=>(blank!=null?'<option value="">'+blank+'</option>':'')+a.map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(x.name)}</option>`).join('');
+const nm=(a,id)=>esc((a.find(x=>x.id===id)||{}).name||'—');
+function vScreens(){return `<div class=card><h3>Add screen</h3><input id=ns placeholder="e.g. Entrance, Counter"> <button onclick="addScreen()">Add</button></div>`+D.screens.map((s,i)=>{const on=seen[s.id]&&Date.now()-seen[s.id]<45000;
+ return `<div class=card><b>${esc(s.name)}</b> <span class="dot ${on?'on':''}"></span><small>${on?'online':'offline'}</small><br><small>Player URL:</small> <code>${location.origin}/player?s=${s.id}</code>
+ <div class=row>Default playlist <select onchange="mut(()=>D.screens[${i}].playlist=this.value)">${opts(D.playlists,s.playlist,'— none —')}</select>
+ <button class=g onclick="ren(${i})">Rename</button><button class=r onclick="if(confirm('Delete screen?'))mut(()=>D.screens.splice(${i},1))">Delete</button></div></div>`}).join('')}
+function addScreen(){const n=$('#ns').value.trim();if(n)mut(()=>D.screens.push({id:'s'+uid(),name:n,playlist:''}))}
+function ren(i){const n=prompt('Screen name',D.screens[i].name);if(n)mut(()=>D.screens[i].name=n)}
+function vMedia(){return `<div class=card><h3>Upload images / videos</h3><input type=file id=fi multiple accept="image/*,video/*"> <button onclick="upl()">Upload</button> <small id=up></small></div>
+<div class=card><h3>Text slide</h3><div class=row><input id=tt placeholder="Headline / message" style="flex:1"> bg <input type=color id=tb value="#0b3d91"> text <input type=color id=tc value="#ffffff"><button onclick="addText()">Add</button></div></div>
+<div class=card><h3>Web page</h3><div class=row><input id=wu placeholder="https://…" style="flex:1"><button onclick="addWeb()">Add</button></div><small>Some sites refuse to be shown inside another page.</small></div>
+<div class=card><h3>Library</h3>${D.media.map((m,i)=>`<div class=row>${m.type==='image'?`<img src="/media/${m.file}" class=th>`:m.type==='video'?`<video src="/media/${m.file}#t=0.5" class=th muted></video>`:`<span class=th>${m.type}</span>`}<span style="flex:1">${esc(m.name)}</span><button class=r onclick="delM(${i})">Delete</button></div>`).join('')||'<small>Nothing yet</small>'}</div>`}
+async function upl(){for(const f of $('#fi').files){$('#up').textContent='Uploading '+f.name+'…';await fetch('/api/upload?name='+encodeURIComponent(f.name),{method:'POST',headers:{'Content-Type':f.type||'application/octet-stream'},body:f})}await load()}
+const addText=()=>{const v=$('#tt').value.trim();if(v)mut(()=>D.media.push({id:uid(),type:'text',name:v,text:v,bg:$('#tb').value,fg:$('#tc').value}))};
+const addWeb=()=>{const v=$('#wu').value.trim();if(v)mut(()=>D.media.push({id:uid(),type:'web',name:v,url:v}))};
+function delM(i){const id=D.media[i].id;mut(()=>{D.playlists.forEach(p=>p.items=p.items.filter(x=>x.media!==id));D.media.splice(i,1)})}
+function vPl(){const p=D.playlists.find(x=>x.id===selPl)||D.playlists[0];selPl=p?p.id:'';const pi=D.playlists.indexOf(p);
+ return `<div class=card><div class=row><input id=np placeholder="New playlist name"><button onclick="addPl()">Create</button> Edit: <select onchange="selPl=this.value;render()">${opts(D.playlists,selPl)}</select>${p?'<button class=r onclick="delPl()">Delete playlist</button>':''}</div></div>`+
+ (p?`<div class=card><h3>${esc(p.name)}</h3>${p.items.map((it,i)=>`<div class=row><b>${i+1}.</b><span style="flex:1">${nm(D.media,it.media)}</span><label>seconds <input type=number min=1 value="${it.duration||10}" style="width:70px" onchange="mut(()=>D.playlists[${pi}].items[${i}].duration=+this.value)"></label><button class=g onclick="mv(${pi},${i},-1)">↑</button><button class=g onclick="mv(${pi},${i},1)">↓</button><button class=r onclick="mut(()=>D.playlists[${pi}].items.splice(${i},1))">✕</button></div>`).join('')}
+ <hr><div class=row>Add <select id=am>${opts(D.media,'')}</select><button onclick="addItem(${pi})">Add to playlist</button></div><small>Videos play to the end; seconds apply to images, text and web pages.</small></div>`:'')}
+const addPl=()=>{const n=$('#np').value.trim();if(n)mut(()=>{const p={id:'p'+uid(),name:n,items:[]};D.playlists.push(p);selPl=p.id})};
+const delPl=()=>{if(confirm('Delete playlist?'))mut(()=>{const id=selPl;D.playlists=D.playlists.filter(p=>p.id!==id);D.screens.forEach(s=>{if(s.playlist===id)s.playlist=''});D.schedules=D.schedules.filter(s=>s.playlist!==id);selPl=''})};
+const addItem=pi=>{const m=$('#am').value;if(m)mut(()=>D.playlists[pi].items.push({media:m,duration:10}))};
+const mv=(pi,i,d)=>{const a=D.playlists[pi].items,j=i+d;if(j<0||j>=a.length)return;mut(()=>{const t=a[i];a[i]=a[j];a[j]=t})};
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function vSch(){return `<div class=card><h3>New schedule rule</h3><div class=row>Screen <select id=ss><option value="*">All screens</option>${opts(D.screens,'')}</select> Playlist <select id=sp>${opts(D.playlists,'')}</select></div>
+<div class=row>Days ${DAYS.map((d,i)=>`<label><input type=checkbox class=sd value=${i}> ${d}</label>`).join(' ')} <small>(none = every day)</small></div>
+<div class=row>Time <input type=time id=st value="09:00"> to <input type=time id=se value="17:00"> Dates <input type=date id=sf> to <input type=date id=sx></div>
+<button onclick="addSch()">Add rule</button><br><small>Later rules override earlier ones. When no rule matches, the screen’s default playlist plays. Time zone: ${esc(TZ)}.</small></div>`+
+ D.schedules.map((s,i)=>`<div class=card><div class=row><span style="flex:1">${s.screen==='*'?'All screens':nm(D.screens,s.screen)} → <b>${nm(D.playlists,s.playlist)}</b> · ${s.days.length?s.days.map(d=>DAYS[d]).join(' '):'Every day'} · ${s.start}–${s.end}${s.from?' · from '+s.from:''}${s.to?' to '+s.to:''}</span><button class=r onclick="mut(()=>D.schedules.splice(${i},1))">Delete</button></div></div>`).join('')}
+const addSch=()=>{if(!$('#sp').value)return alert('Create a playlist first');mut(()=>D.schedules.push({id:uid(),screen:$('#ss').value,playlist:$('#sp').value,days:[...document.querySelectorAll('.sd:checked')].map(e=>+e.value),start:$('#st').value||'00:00',end:$('#se').value||'24:00',from:$('#sf').value,to:$('#sx').value}))};
+function render(){const T={screens:['Screens',vScreens],media:['Media',vMedia],playlists:['Playlists',vPl],schedule:['Schedule',vSch]};
+ $('#nv').innerHTML=Object.keys(T).map(k=>`<button class="t ${k===tab?'on':''}" onclick="tab='${k}';render()">${T[k][0]}</button>`).join('');$('#v').innerHTML=T[tab][1]()}
+load();setInterval(()=>{if(tab==='screens'&&!document.activeElement.matches('input,select'))load()},15000);
+</script></body></html>

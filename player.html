@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Player</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none;font-family:Arial,sans-serif}
+#s{position:absolute;top:0;left:0;width:100%;height:100%}
+.it{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;animation:f .8s}
+@keyframes f{from{opacity:0}to{opacity:1}}
+.it img,.it video,.it iframe{width:100%;height:100%;object-fit:contain;border:0;background:#000}
+.tx{font-size:7vw;font-weight:700;text-align:center;padding:6vw;line-height:1.15;box-sizing:border-box}</style></head>
+<body><div id="s"></div><script>
+var id=(location.search.match(/[?&]s=([^&]+)/)||[])[1]||'screen1',cur='',items=[],idx=0,tm=null,S=document.getElementById('s');
+function show(el){el.className+=' it';S.appendChild(el);setTimeout(function(){while(S.children.length>1)S.removeChild(S.firstChild)},900)}
+function idle(){var d=document.createElement('div');d.className='tx';d.style.color='#777';d.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' \u2014 no content scheduled';show(d)}
+function next(){clearTimeout(tm);if(!items.length){idle();tm=setTimeout(next,15000);return}
+ var m=items[idx%items.length],el=document.createElement('div'),dur=(m.duration||10)*1000;idx++;
+ if(m.type==='image'){var i=new Image();i.src='/media/'+m.file;el.appendChild(i);tm=setTimeout(next,dur)}
+ else if(m.type==='video'){var v=document.createElement('video');v.src='/media/'+m.file;v.muted=true;v.autoplay=true;v.onended=next;v.onerror=function(){tm=setTimeout(next,2000)};el.appendChild(v)}
+ else if(m.type==='web'){var f=document.createElement('iframe');f.src=m.url;el.appendChild(f);tm=setTimeout(next,dur)}
+ else{el.className='tx';el.style.background=m.bg||'#0b3d91';el.style.color=m.fg||'#fff';el.textContent=m.text;tm=setTimeout(next,dur)}
+ show(el)}
+function poll(){var x=new XMLHttpRequest();x.open('GET','/api/screen/'+id+'?_='+Date.now());
+ x.onload=function(){try{var d=JSON.parse(x.responseText),sig=JSON.stringify(d.items);if(sig!==cur){cur=sig;items=d.items||[];idx=0;next()}}catch(e){}};x.send()}
+poll();setInterval(poll,15000);
+</script></body></html>
